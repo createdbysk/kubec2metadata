@@ -1,0 +1,24 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kubec2metadata
+  labels:
+    app: kubec2metadata
+spec:
+  template:
+    metadata:
+      labels:
+        name: kubec2metadata
+    spec:
+      containers:
+        - image: satvidh/kubec2metadata:latest
+          name: kubec2metadata
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /root/.kube/config
+              name: kube-config
+      volumes:
+        - name: kube-config
+          hostPath:
+            path: /Users/satish.kumar/.kube/config
