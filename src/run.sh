@@ -12,7 +12,7 @@ cleanAndExport() {
 }
 
 
-mkdir -p ${HOME}/.kube
-CONFIG_FILE_PATH=/opt/kube/config ./create-config.py > ${HOME}/.kube/config || fail
+# mkdir -p ${HOME}/.kube
+# CONFIG_FILE_PATH=/opt/kube/config ./create-config.py > ${HOME}/.kube/config || fail
 
 python3 watch.py
