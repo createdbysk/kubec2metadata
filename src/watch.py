@@ -1,16 +1,51 @@
 from kubernetes import client, config, watch
 import yaml
 import logging
+import typing
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def get_deployments_for_selector(label_selector_key: str,
+                                 label_selector_value: str) \
+     -> typing.Generator[client.ExtensionsV1beta1Deployment, None, None]:
+    """
+    Gets the deployments that have a label key that matches label_selector_key
+    that has a value label_selector_value.
+
+    @params label_selector_key      -   The key of the label.
+    @params label_selector_value    -   The value for that key.
+    @returns A generator.
+    """
+    extensions_v1_beta1 = client.ExtensionsV1beta1Api()
+    label_selector = f"{label_selector_key}={label_selector_value}"
+    logger.info(f"Generate deployments with label selector {label_selector}")
+    deployments_response = \
+        extensions_v1_beta1.list_deployment_for_all_namespaces(
+            label_selector=label_selector)
+    while True:
+        deployments = deployments_response.items
+        for deployment in deployments:
+            yield deployment
+        _continue = deployments_response.metadata._continue
+        if _continue is None:
+            break
+        deployments_response = \
+            extensions_v1_beta1.list_deployment_for_all_namespaces(
+                _continue=_continue,
+                label_selector=label_selector)
+
 # TODO: This needs a satvidh/ectou_metadata image.
 # Configs can be set in Configuration class directly or using helper utility
-config.load_incluster_config()
+try:
+    logger.info("Load config...")
+    config.load_incluster_config()
+    logger.info("Loaded in-cluster config.")
+except kubernetes.config.config_exception.ConfigException:
+    config.load_kube_config()
+    logger.info("Loaded kube config.")
 
 v1 = client.CoreV1Api()
-extensions_v1_beta1 = client.ExtensionsV1beta1Api()
 w = watch.Watch()
 
 namespace = 'default'
@@ -41,22 +76,12 @@ spec:
           imagePullPolicy: IfNotPresent
 """
 metadata_deployments = {}
-cont = None
 logger.info("Find mock metadata deployments.")
-deployments_response = extensions_v1_beta1.list_deployment_for_all_namespaces(
-    label_selector="is_ec2_metadata=True")
-while True:
-    deployments = deployments_response.items
-    for deployment in deployments:
-        ec2_metadata_for = deployment.metadata.labels["ec2_metadata_for"]
-        logger.info(f"Found deployment {ec2_metadata_for}.")
-        metadata_deployments[ec2_metadata_for] = deployment
-    cont = deployments_response.metadata._continue
-    if cont is None:
-        break
-    deployments_response = extensions_v1_beta1.list_deployment_for_all_namespaces(
-        _continue=cont,
-        label_selector="is_ec2_metadata=True")
+for deployment in get_deployments_for_selector("is_ec2_metadata", "True"):
+    ec2_metadata_for = deployment.metadata.labels["ec2_metadata_for"]
+    logger.info(f"Found deployment {ec2_metadata_for}.")
+    metadata_deployments[ec2_metadata_for] = deployment
+
 logger.info("Done with mock metadata deployments.")
 
 for event in w.stream(v1.list_pod_for_all_namespaces, _request_timeout=0):
@@ -73,7 +98,7 @@ for event in w.stream(v1.list_pod_for_all_namespaces, _request_timeout=0):
                 if pod_role:
                     logger.info(f"Found a pod with pod role={pod_role}.")
                     if pod_role not in metadata_deployments:
-                        logger.info(f"Did not find mock metadata for {pod_role}.")
+                        logger.info(f"Did not find mock metadata pod for {pod_role}.")
                         deployment_yaml = deployment_template.format(name=pod_role)
                         body = yaml.load(deployment_yaml)
                         extensions_v1_beta1.create_namespaced_deployment(
@@ -81,6 +106,10 @@ for event in w.stream(v1.list_pod_for_all_namespaces, _request_timeout=0):
                             body=body)
                         logger.info(f"Deployed mock metadata named {pod_role}")
                         continue
+                    else:
+                        logger.info(f"Found mock metadata pod for {pod_role}")
+                        continue
+                        
             logger.info(f"Pod is not a candidate for mock metadata"
                          " because it does not have a pod role annotation.")
             # If the pod is an mock metadata pod, then find its deployment
@@ -92,12 +121,11 @@ for event in w.stream(v1.list_pod_for_all_namespaces, _request_timeout=0):
                 is_ec2_metadata = labels.get("is_ec2_metadata", None)
                 if is_ec2_metadata == "True":
                     ec2_metadata_for = labels["ec2_metadata_for"]
-                    deployments_response = extensions_v1_beta1.list_deployment_for_all_namespaces(
-                        label_selector="ec2_metadata_for={}".format(ec2_metadata_for))
-                    if deployments_response:
+                    for deployment in get_deployments_for_selector(
+                        "ec2_metadata_for", ec2_metadata_for):
                         is_mock_metadata_pod = True
                         logger.info(f"Pod provides metadata for role {ec2_metadata_for}.")
-                        metadata_deployments[ec2_metadata_for] = deployments_response
+                        metadata_deployments[ec2_metadata_for] = deployment
             if not is_mock_metadata_pod:
                 logger.info(f"Pod is not a mock metadata pod.")
             # metadata = obj['metadata']
