@@ -15,10 +15,3 @@ spec:
         - image: satvidh/kubec2metadata:latest
           name: kubec2metadata
           imagePullPolicy: IfNotPresent
-          volumeMounts:
-            - mountPath: /root/.kube/config
-              name: kube-config
-      volumes:
-        - name: kube-config
-          hostPath:
-            path: /Users/satish.kumar/.kube/config

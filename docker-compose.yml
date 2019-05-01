@@ -1,14 +1,7 @@
+# This file exists purely to simplify the development build.
 version: "3.7"
 services:
   kubec2metadata:
     build:
       context: .
-    volumes:
-      - ${HOME}/.kube/config:/opt/kube/config
-    links:
-      - dockerhost
-    restart: on-failure
-  dockerhost:
-    image: qoomon/docker-host
-    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
-    restart: on-failure
+    image: satvidh/kubec2metadata
