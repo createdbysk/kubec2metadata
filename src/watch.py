@@ -2,9 +2,25 @@ from kubernetes import client, config, watch
 import yaml
 import logging
 import typing
+#import docker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+# TODO: This needs a satvidh/ectou_metadata image.
+# Configs can be set in Configuration class directly or using helper utility
+try:
+    logger.info("Load config...")
+    config.load_incluster_config()
+    logger.info("Loaded in-cluster config.")
+except kubernetes.config.config_exception.ConfigException:
+    config.load_kube_config()
+    logger.info("Loaded kube config.")
+
+#docker_client = docker.from_env
+v1 = client.CoreV1Api()
+w = watch.Watch()
+extensions_v1_beta1 = client.ExtensionsV1beta1Api()
+
 
 def get_deployments_for_selector(label_selector_key: str,
                                  label_selector_value: str) \
@@ -17,7 +33,6 @@ def get_deployments_for_selector(label_selector_key: str,
     @params label_selector_value    -   The value for that key.
     @returns A generator.
     """
-    extensions_v1_beta1 = client.ExtensionsV1beta1Api()
     label_selector = f"{label_selector_key}={label_selector_value}"
     logger.info(f"Generate deployments with label selector {label_selector}")
     deployments_response = \
@@ -34,19 +49,6 @@ def get_deployments_for_selector(label_selector_key: str,
             extensions_v1_beta1.list_deployment_for_all_namespaces(
                 _continue=_continue,
                 label_selector=label_selector)
-
-# TODO: This needs a satvidh/ectou_metadata image.
-# Configs can be set in Configuration class directly or using helper utility
-try:
-    logger.info("Load config...")
-    config.load_incluster_config()
-    logger.info("Loaded in-cluster config.")
-except kubernetes.config.config_exception.ConfigException:
-    config.load_kube_config()
-    logger.info("Loaded kube config.")
-
-v1 = client.CoreV1Api()
-w = watch.Watch()
 
 namespace = 'default'
 
@@ -76,6 +78,7 @@ spec:
           imagePullPolicy: IfNotPresent
 """
 metadata_deployments = {}
+pods_with_role = {}
 logger.info("Find mock metadata deployments.")
 for deployment in get_deployments_for_selector("is_ec2_metadata", "True"):
     ec2_metadata_for = deployment.metadata.labels["ec2_metadata_for"]
@@ -109,7 +112,7 @@ for event in w.stream(v1.list_pod_for_all_namespaces, _request_timeout=0):
                     else:
                         logger.info(f"Found mock metadata pod for {pod_role}")
                         continue
-                        
+
             logger.info(f"Pod is not a candidate for mock metadata"
                          " because it does not have a pod role annotation.")
             # If the pod is an mock metadata pod, then find its deployment

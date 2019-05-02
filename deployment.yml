@@ -15,3 +15,10 @@ spec:
         - image: satvidh/kubec2metadata:latest
           name: kubec2metadata
           imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-socket
+      volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
