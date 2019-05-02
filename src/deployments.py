@@ -9,8 +9,8 @@ class Deployments(object):
         self.__extensions_v1_beta1 = client.ExtensionsV1beta1Api()
 
     def get_selected_deployments(self,
-                                     label_selector_key: str,
-                                     label_selector_value: str) \
+                                 label_selector_key: str,
+                                 label_selector_value: str) \
          -> typing.Generator[client.ExtensionsV1beta1Deployment, None, None]:
         """
         Gets the deployments that have a label key that matches label_selector_key

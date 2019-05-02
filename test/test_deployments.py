@@ -31,8 +31,8 @@ class TestDeployments(object):
     @pytest.mark.parametrize(
         "lists_of_items, _continues",
         [
-            ([["1", "2", "3"]], [None]),
-            ([["1", "2", "3"], ["4", "5", "6"]], ["dork", None])
+            ([["1", "2", "3"]], []),
+            ([["1", "2", "3"], ["4", "5", "6"]], ["dork"])
         ]
     )
     def test_deployments_for_selector(self,
@@ -41,14 +41,16 @@ class TestDeployments(object):
                                       label_selector_key,
                                       label_selector_value,
                                       deployments,
-                                      mock_extensions_v1_beta_api):
+                                      mock_extensions_v1_beta_api,
+                                      mocker):
         # GIVEN
         # function parameters
 
         # itertools.chain() chains the contents of the lists.
         # from_iterable takes an argument that is a list of iterables.
         expected_result = list(itertools.chain.from_iterable(lists_of_items))
-
+        # The last _continue must always be None.
+        _continues.append(None)
         MockDeployments = collections.namedtuple("MockDeployments",
                                                   field_names=["items", "metadata"])
         # Cannot use a namedtuple here because namedtuple does not
@@ -76,3 +78,20 @@ class TestDeployments(object):
 
         # THEN
         assert actual_result == expected_result
+
+        # The first call does not pass the _continue.
+        # Subsequent calls do except for the last one.
+        calls = [
+            mocker.call(
+                label_selector=f"{label_selector_key}={label_selector_value}"
+            )
+        ] + [
+            mocker.call(
+                _continue=_continue,
+                label_selector=f"{label_selector_key}={label_selector_value}"
+            )
+            for _continue in _continues[:-1]
+        ]
+        mock_extensions_v1_beta_api.list_deployment_for_all_namespaces.assert_has_calls(
+            calls
+        )
