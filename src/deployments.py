@@ -41,7 +41,7 @@ class Deployments(object):
                     _continue=_continue,
                     label_selector=label_selector)
 
-    def ensure_metadata_deployment(self, pod_role: str) -> None:
+    def ensure_ec2_metadata_deployment(self, pod_role: str) -> None:
         """
         Ensures a metadata deployment exists for the given pod_role.
 

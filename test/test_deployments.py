@@ -99,14 +99,6 @@ class TestDeployments(object):
         )
 
     @pytest.fixture()
-    def namespace(self):
-        return "default"
-
-    @pytest.fixture()
-    def pod_role(self):
-        return "pod-role"
-
-    @pytest.fixture()
     def body(self, pod_role):
         deployment_spec = f"""
 ---
@@ -142,7 +134,7 @@ spec:
             [object()]
         ]
     )
-    def test_ensure_metadata_deployment(self,
+    def test_ensure_ec2_metadata_deployment(self,
                                         prior_deployments,
                                         body,
                                         namespace,
@@ -164,13 +156,13 @@ spec:
         mock_extensions_v1_beta_api.create_namespaced_deployment.return_value = None
 
         # WHEN
-        deployments.ensure_metadata_deployment(pod_role)
+        deployments.ensure_ec2_metadata_deployment(pod_role)
 
         # THEN
         mock_get_selected_deployments.assert_called_with("ec2_metadata_for",
                                                          pod_role)
         # If there were no prior_deployments, then expect
-        # ensure_metadata_deployment creates a deployment.
+        # ensure_ec2_metadata_deployment creates a deployment.
         if len(prior_deployments) == 0:
             mock_extensions_v1_beta_api.create_namespaced_deployment.assert_called_with(
                 namespace=namespace,
