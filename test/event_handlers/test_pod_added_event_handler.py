@@ -34,3 +34,19 @@ class TestAddedEventHandler(object):
         # THEN
         mock_pods.get_pod_role.assert_called_with(pod)
         mock_pods.ensure_ec2_metadata.assert_not_called()
+
+    def test_handle_given_pod_has_a_pod_role(self,
+                                             handler,
+                                             pod,
+                                             pod_role,
+                                             mock_pods):
+        # GIVEN
+        # pod
+        mock_pods.get_pod_role.return_value = pod_role
+
+        # WHEN
+        handler.handle(pod)
+
+        # THEN
+        mock_pods.get_pod_role.assert_called_with(pod)
+        mock_pods.ensure_ec2_metadata.assert_called_with(pod)
