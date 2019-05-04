@@ -13,7 +13,7 @@ try:
     logger.info("Load config...")
     config.load_incluster_config()
     logger.info("Loaded in-cluster config.")
-except kubernetes.config.config_exception.ConfigException:
+except config.config_exception.ConfigException:
     config.load_kube_config()
     logger.info("Loaded kube config.")
 
@@ -92,17 +92,17 @@ for event in w.stream(v1.list_pod_for_all_namespaces, _request_timeout=0):
             # and add it to the metadata_deployments dictionary.
             logger.info("Check if pod is a mock metadata pod.")
             labels = obj.metadata.labels
-            is_mock_metadata_pod = False
+            is_ec2_metadata_pod = False
             if labels:
                 is_ec2_metadata = labels.get("is_ec2_metadata", None)
                 if is_ec2_metadata == "True":
                     ec2_metadata_for = labels["ec2_metadata_for"]
                     for deployment in deployments_instance.get_selected_deployments(
                         "ec2_metadata_for", ec2_metadata_for):
-                        is_mock_metadata_pod = True
+                        is_ec2_metadata_pod = True
                         logger.info(f"Pod provides metadata for role {ec2_metadata_for}.")
                         metadata_deployments[ec2_metadata_for] = deployment
-            if not is_mock_metadata_pod:
+            if not is_ec2_metadata_pod:
                 logger.info(f"Pod is not a mock metadata pod.")
             # metadata = obj['metadata']
             # annotations = metadata.get('annotations', None)

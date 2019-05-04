@@ -57,7 +57,7 @@ class Deployments(object):
         # If this enters the for loop, then at least one deployment exists
         # with the given label value.
         # Do not create a deployment in that case.
-        for prior_deployment in prior_deployments:
+        for _ in prior_deployments:
             logger.info(f"Found deployment for {pod_role}. Nothing more to do.")
             return
 
