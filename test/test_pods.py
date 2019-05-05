@@ -3,28 +3,65 @@ from kubernetes import client
 
 class TestPods(object):
     @pytest.fixture()
+    def pod_ip(self):
+        yield "10.1.2.10"
+
+    @pytest.fixture()
+    def container_id(self):
+        yield "ContainerIDWhichIsSomeVeryLongHexadecimalString"
+
+    @pytest.fixture()
     def v1pod(self):
         instance = client.V1Pod()
         yield instance
 
     @pytest.fixture()
     def v1pod_with_pod_role(self, v1pod, pod_role):
-        v1pod.metadata = client.V1ObjectMeta()
-        v1pod.metadata.annotations = {
+        instance = v1pod
+        instance.metadata = client.V1ObjectMeta()
+        instance.metadata.annotations = {
             "iam.amazonaws.com/role": pod_role
         }
-        yield v1pod
+        yield instance
 
     @pytest.fixture()
-    def v1pod_with_pod_role_and_status(self, v1pod_with_pod_role):
-        v1pod_with_pod_role.status = client.V1PodStatus()
-        v1pod_with_pod_role.status.container_status
+    def v1pod_with_pod_role_and_status(
+        self, 
+        v1pod_with_pod_role, 
+        pod_role, 
+        pod_ip,
+        container_id):
+        instance = v1pod_with_pod_role
+        # Status object for container_id and pod_ip
+        instance.status = client.V1PodStatus()
+        # pod_id
+        instance.status.pod_ip = pod_ip
+        # Container status for container_id
+        image = "image"        
+        image_id = "ImageIDWhichIsSomeVeryLongHexadecimalString"
+        name = "name"
+
+        container_status = client.V1ContainerStatus(
+            container_id=container_id, 
+            image=image, 
+            image_id=image_id, 
+            name=name, 
+            ready=True, 
+            restart_count=1)
+        instance.container_statuses = [container_status]
+
+        yield instance
 
     @pytest.fixture()
     def pods(self):
         import pods
         instance = pods.Pods()
         yield instance
+
+    @pytest.fixture()
+    def mock_deployments(self, mocker):
+        deployments = mocker.patch("deployments.Deployments", autospec=True).return_value
+        yield deployments
 
     @pytest.fixture()
     def mock_containerama(self, mocker):
@@ -94,16 +131,18 @@ class TestPods(object):
         assert expected_result == actual_result
 
     def test_ensure_ec2_metadata(
-        self, v1pod_with_pod_role, pod_role, pods, mock_containerama
+        self, v1pod_with_pod_role_and_status, pod_role, pods, pod_ip, container_id, 
+        mock_deployments, mock_containerama
     ):
         # GIVEN
         # v1pod_with_pod_role
         # pod_role
         # pods
-        # mock_containerama
+        # mock_deployments
 
         # WHEN
-        pods.ensure_ec2_metadata(v1pod_with_pod_role)
+        pods.ensure_ec2_metadata(v1pod_with_pod_role_and_status)
 
         # THEN
-        mock_containerama.join_cast.assert_called_with(pod_role)
+        mock_deployments.ensure_ec2_metadata_deployment.assert_called_with(pod_role)
+        mock_containerama.join_cast(container_id, pod_role)
