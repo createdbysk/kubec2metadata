@@ -16,15 +16,20 @@ class TestPods(object):
         yield v1pod
 
     @pytest.fixture()
+    def v1pod_with_pod_role_and_status(self, v1pod_with_pod_role):
+        v1pod_with_pod_role.status = client.V1PodStatus()
+        v1pod_with_pod_role.status.container_status
+
+    @pytest.fixture()
     def pods(self):
         import pods
         instance = pods.Pods()
         yield instance
 
     @pytest.fixture()
-    def mock_deployments(self, mocker):
-        deployments = mocker.patch("deployments.Deployments", autospec=True).return_value
-        yield deployments
+    def mock_containerama(self, mocker):
+        containerama = mocker.patch("containerama.Containerama", autospec=True).return_value
+        yield containerama
 
     def test_get_pod_role_given_pod_does_not_have_any_metadata(
         self, v1pod, pods
@@ -89,16 +94,16 @@ class TestPods(object):
         assert expected_result == actual_result
 
     def test_ensure_ec2_metadata(
-        self, v1pod_with_pod_role, pod_role, pods, mock_deployments
+        self, v1pod_with_pod_role, pod_role, pods, mock_containerama
     ):
         # GIVEN
         # v1pod_with_pod_role
         # pod_role
         # pods
-        # mock_deployments
+        # mock_containerama
 
         # WHEN
         pods.ensure_ec2_metadata(v1pod_with_pod_role)
 
         # THEN
-        mock_deployments.ensure_ec2_metadata_deployment.assert_called_with(pod_role)
+        mock_containerama.join_cast.assert_called_with(pod_role)

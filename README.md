@@ -1,5 +1,6 @@
-# kubec2metadata
-Provides mock EC2 metadata to Kubernetes pods for local development.
+# containerama
+Provides mock EC2 metadata to containers for local development.
+Implemented for Kubernetes deployments.
 
 # Usage
 ## Local Development
