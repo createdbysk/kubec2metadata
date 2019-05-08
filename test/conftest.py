@@ -7,3 +7,9 @@ def namespace():
 @pytest.fixture()
 def pod_role():
     return "pod-role"
+
+@pytest.fixture()
+def v1pod():
+    from kubernetes import client
+    instance = client.V1Pod()
+    yield instance

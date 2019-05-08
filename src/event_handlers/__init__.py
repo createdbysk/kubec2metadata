@@ -1,7 +1,8 @@
-from .pod_added_event_handler import *
+from .pod_with_role_added_event_handler import *
+from .pod_event_handler_chain import *
 
 event_handler_classes = {
-    "ADDED": PodAddedEventHandler
+    "ADDED": PodWithRoleAddedEventHandler
 }
 
 def create_event_handler(event):

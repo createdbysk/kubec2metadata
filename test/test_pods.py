@@ -11,11 +11,6 @@ class TestPods(object):
         yield "ContainerIDWhichIsSomeVeryLongHexadecimalString"
 
     @pytest.fixture()
-    def v1pod(self):
-        instance = client.V1Pod()
-        yield instance
-
-    @pytest.fixture()
     def v1pod_with_pod_role(self, v1pod, pod_role):
         instance = v1pod
         instance.metadata = client.V1ObjectMeta()
